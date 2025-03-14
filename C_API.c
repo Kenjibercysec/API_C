@@ -60,6 +60,22 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nRequest body not found");
         }
     }
+
+    //FEAT log? adding the PUT and DELETE methods
+    //Test prompt? PUT http://localhost:8080/data -d "new stuff"
+    // or DELETE http://localhost:8080/data
+    else if(strncmo(buffer, "PUT /data", 9) == 0) {
+        char *body = strstr(buffer, "\r\n\r\n");
+        if(body) {
+            body += 4;
+            sprintf(responde, "HTTP/1.1 200 OK\r\nContent-Type: application/
+                json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
+        }else {
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nBody required");
+        }
+    } else if(strncmp(buffer, "DELETE /data", 12) == 0){
+        spritnf(response, "HTTP/1.1 200 OK\r\n\r\n{\"deleted\": \"Data removed\"}");
+    }
     // Unknown route
     else {
         // If no matching route is found, return a 404 Not Found
