@@ -92,7 +92,12 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
         char *body = strstr(buffer, "\r\n\r\n");
         if(body) {
             body += 4;
+<<<<<<< HEAD
             sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
+=======
+            sprintf(responde, "HTTP/1.1 200 OK\r\nContent-Type: application/
+                json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
+>>>>>>> 17be213f0db1710c828c028d4ee7b14a8410aa24
         }else {
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nBody required");
         }
