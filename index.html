@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        button {
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    <form id="taskForm">
+        <input type="text" id="taskInput" placeholder="Enter a new task" required>
+        <button type="submit">Add Task</button>
+    </form>
+    <ul id="taskList"></ul>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+        const auth = 'Basic ' + btoa('user:pass'); // Base64 encode "user:pass"
+
+        // Function to fetch and display tasks
+        function loadTasks() {
+            fetch(`${API_URL}/tasks`, {
+                headers: {
+                    'Authorization': auth
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Unauthorized or error');
+                return response.json();
+            })
+            .then(data => {
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+                data.tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ${task.description} (ID: ${task.id})
+                        <span>
+                            <button onclick="toggleTask(${task.id}, ${task.completed})">
+                                ${task.completed ? 'Undo' : 'Complete'}
+                            </button>
+                            <button onclick="deleteTask(${task.id})">Delete</button>
+                        </span>
+                    `;
+                    taskList.appendChild(li);
+                });
+            })
+            // Yeah, you need to use javascript, I didn't wanted to but there's nothing I can do about it
+            // Only pure HTMl can't make HTTP requests without reloading, AND, I need to manipulate the DOM
+            .catch(error => console.error('Error loading tasks:', error));
+        }
+
+        // Function to add a new task
+        document.getElementById('taskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const description = document.getElementById('taskInput').value;
+            fetch(`${API_URL}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': auth,
+                    'Content-Type': 'text/plain' // API expects plain text
+                },
+                body: description
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to add task');
+                return response.json();
+            })
+            .then(() => {
+                document.getElementById('taskInput').value = '';
+                loadTasks(); // Refresh the list
+            })
+            .catch(error => console.error('Error adding task:', error));
+        });
+
+        // Function to toggle task completion
+        function toggleTask(id, completed) {
+            fetch(`${API_URL}/tasks/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': auth
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to toggle task');
+                loadTasks(); // Refresh the list
+            })
+            .catch(error => console.error('Error toggling task:', error));
+        }
+
+        // Function to delete a task
+        function deleteTask(id) {
+            fetch(`${API_URL}/tasks/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': auth
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to delete task');
+                loadTasks(); // Refresh the list
+            })
+            .catch(error => console.error('Error deleting task:', error));
+        }
+
+        // Load tasks when the page loads
+        window.onload = loadTasks;
+    </script>
+</body>
+</html>

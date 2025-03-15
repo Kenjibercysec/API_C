@@ -8,129 +8,179 @@
 #define BUFFER_SIZE 1024   // Size of the buffer for receiving/sending data
 #define MAX_TASKS 100      // Maximum number of tasks you can create
 
-
-// Structure to store all the tasks
 typedef struct {
-    int id;             // Unique identifier for the task
-    char description[100]; // Description of the task
-    int completed;      // Flag to mark the task as completed
+    int id;
+    char description[100];
+    int completed;
 } Task;
 
-// Global array to store all the tasks
 Task tasks[MAX_TASKS];
-int task_count = 0; // Number of tasks currently stored
+int task_count = 0;
 
-// Function to save the log requests in a file
-void log_request(const char *request){
-    FILE *file = fopen("api_log.txt", "a");
-    if(log){
-        fprintf(log, "[%s] %s\n", __TIMESTAMP__, request);
-        fclose(log);
+void save_tasks() {
+    FILE *file = fopen("tasks.txt", "w");
+    if (file) {
+        for (int i = 0; i < task_count; i++) {
+            fprintf(file, "%d,%s,%d\n", tasks[i].id, tasks[i].description, tasks[i].completed);
+        }
+        fclose(file);
+    } else {
+        printf("Failed to save tasks to file\n");
     }
 }
 
+void load_tasks() {
+    FILE *file = fopen("tasks.txt", "r");
+    if (file) {
+        task_count = 0;
+        while (task_count < MAX_TASKS && fscanf(file, "%d,%99[^,],%d\n", 
+                &tasks[task_count].id, tasks[task_count].description, &tasks[task_count].completed) == 3) {
+            task_count++;
+        }
+        fclose(file);
+    }
+}
 
+void log_request(const char *request) {
+    FILE *file = fopen("api_log.txt", "a");
+    if (file) {
+        fprintf(file, "[%s] %s\n", __TIMESTAMP__, request);
+        fclose(file);
+    }
+}
 
-#pragma comment(lib, "ws2_32.lib") // Links the Winsock library
-                                // Error flag: This function is not working properly but it doesn't seem to be a critical error, it still works so...
+int is_authorized(const char *buffer) {
+    const char *auth = strstr(buffer, "Authorization: Basic ");
+    if (auth) {
+        auth += 21;
+        return strncmp(auth, "dXNlcjpwYXNz", 12) == 0;
+    }
+    return 0;
+}
 
-// Function executed by each thread to handle a client connection
 DWORD WINAPI handle_client(LPVOID client_socket) {
-    SOCKET sock = (SOCKET)client_socket; // Cast the void pointer to a SOCKET
-    char buffer[BUFFER_SIZE];            // Buffer to store the incoming request
-    char response[BUFFER_SIZE];          // Buffer to store the outgoing response
+    SOCKET sock = (SOCKET)client_socket;
+    char buffer[BUFFER_SIZE];
+    char response[BUFFER_SIZE];
 
-    // Receive the request from the client
     int bytes_received = recv(sock, buffer, BUFFER_SIZE - 1, 0);
     if (bytes_received < 0) {
         printf("Error receiving data: %d\n", WSAGetLastError());
-        closesocket(sock); // Close the socket if there's an error
+        closesocket(sock);
         return 1;
     }
-    buffer[bytes_received] = '\0'; // Null-terminate the received data
-    printf("Request received:\n%s\n", buffer); // Print the request for debugging
+    buffer[bytes_received] = '\0';
+    printf("Request received:\n%s\n", buffer);
 
-    // Route: GET /hello
-    if (strncmp(buffer, "GET /hello", 10) == 0) {
-        // If the request is a GET to /hello, return a JSON response
-        sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"message\": \"Hello from GET /hello!\"}");
+    log_request(buffer);
+
+    if (!is_authorized(buffer)) {
+        sprintf(response, "HTTP/1.1 401 Unauthorized\r\nAccess-Control-Allow-Origin: *\r\nWWW-Authenticate: Basic realm=\"To-Do API\"\r\nContent-Type: text/plain\r\n\r\nUnauthorized access");
+        send(sock, response, strlen(response), 0);
+        closesocket(sock);
+        return 1;
     }
-    // Route: POST /data 
-    // Future fix flag: Still has some work to be done, MUST implement buffer overflow protection ASAP
-    else if (strncmp(buffer, "POST /data", 10) == 0) {
-        // Find the body of the request (after headers, separated by double newline)
+
+    if (strncmp(buffer, "POST /tasks", 11) == 0) {
         char *body = strstr(buffer, "\r\n\r\n");
-        if (body) {
-            body += 4; // Skip the "\r\n\r\n" to reach the actual content
-            // Look for a "name" field in the JSON (e.g., {"name": "John"})
-            char *name = strstr(body, "\"name\":\"");
-            if (name) {
-                name += 7; // Skip the "name":" part
-                char *name_end = strchr(name, '"'); // Find the end of the value
-                if (name_end) {
-                    *name_end = '\0'; // Null-terminate the name string
-                    // Build a response with the extracted name
-                    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"received\": \"Hello, %s!\"}", name);
-                } else {
-                    // If the JSON is malformed, return a 400 Bad Request
-                    sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nInvalid JSON");
-                }
+        if (body && task_count < MAX_TASKS) {
+            body += 4;
+            if (strlen(body) > 99) {
+                sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nDescription too long");
             } else {
-                // If "name" field is not found, return a 400 Bad Request
-                sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nField 'name' not found");
+                tasks[task_count].id = task_count + 1;
+                strncpy(tasks[task_count].description, body, 99);
+                tasks[task_count].description[99] = '\0';
+                tasks[task_count].completed = 0;
+                task_count++;
+                save_tasks();
+                sprintf(response, "HTTP/1.1 201 Created\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\n\r\n{\"id\": %d, \"description\": \"%s\", \"completed\": false}", 
+                        tasks[task_count-1].id, tasks[task_count-1].description);
             }
         } else {
-            // If no body is found, return a 400 Bad Request
-            sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nRequest body not found");
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nBody required or task limit reached");
         }
     }
-
-    //FEAT log? adding the PUT and DELETE methods
-    //Test prompt? PUT http://localhost:8080/data -d "new stuff"
-    // or DELETE http://localhost:8080/data
-    else if(strncmo(buffer, "PUT /data", 9) == 0) {
-        char *body = strstr(buffer, "\r\n\r\n");
-        if(body) {
-            body += 4;
-<<<<<<< HEAD
-            sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
-=======
-            sprintf(responde, "HTTP/1.1 200 OK\r\nContent-Type: application/
-                json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
->>>>>>> 17be213f0db1710c828c028d4ee7b14a8410aa24
-        }else {
-            sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nBody required");
+    else if (strncmp(buffer, "GET /tasks", 10) == 0) {
+        char task_list[BUFFER_SIZE] = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\n\r\n{\"tasks\": [";
+        for (int i = 0; i < task_count; i++) {
+            char task[256];
+            sprintf(task, "{\"id\": %d, \"description\": \"%s\", \"completed\": %s}%s", 
+                    tasks[i].id, tasks[i].description, tasks[i].completed ? "true" : "false", 
+                    i < task_count - 1 ? "," : "");
+            strcat(task_list, task);
         }
-    } else if(strncmp(buffer, "DELETE /data", 12) == 0){
-        spritnf(response, "HTTP/1.1 200 OK\r\n\r\n{\"deleted\": \"Data removed\"}");
+        strcat(task_list, "]}");
+        strcpy(response, task_list);
     }
-    // Unknown route
+    else if (strncmp(buffer, "PUT /tasks/", 11) == 0) {
+        char *id_start = buffer + 11;
+        char *id_end = strchr(id_start, ' ');
+        if (id_end) {
+            *id_end = '\0';
+            int id = atoi(id_start);
+            for (int i = 0; i < task_count; i++) {
+                if (tasks[i].id == id) {
+                    tasks[i].completed = 1;
+                    save_tasks();
+                    sprintf(response, "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\n\r\n{\"id\": %d, \"description\": \"%s\", \"completed\": true}", 
+                            tasks[i].id, tasks[i].description);
+                    send(sock, response, strlen(response), 0);
+                    closesocket(sock);
+                    return 0;
+                }
+            }
+            sprintf(response, "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nTask not found");
+        } else {
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nInvalid task ID");
+        }
+    }
+    else if (strncmp(buffer, "DELETE /tasks/", 14) == 0) {
+        char *id_start = buffer + 14;
+        char *id_end = strchr(id_start, ' ');
+        if (id_end) {
+            *id_end = '\0';
+            int id = atoi(id_start);
+            for (int i = 0; i < task_count; i++) {
+                if (tasks[i].id == id) {
+                    for (int j = i; j < task_count - 1; j++) {
+                        tasks[j] = tasks[j + 1];
+                    }
+                    task_count--;
+                    save_tasks();
+                    sprintf(response, "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\n\r\n{\"deleted\": \"Task %d\"}", id);
+                    send(sock, response, strlen(response), 0);
+                    closesocket(sock);
+                    return 0;
+                }
+            }
+            sprintf(response, "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nTask not found");
+        } else {
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nInvalid task ID");
+        }
+    }
     else {
-        // If no matching route is found, return a 404 Not Found
-        sprintf(response, "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nWrong route buddy");
+        sprintf(response, "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nWrong route buddy");
     }
 
-    // Send the response back to the client
     send(sock, response, strlen(response), 0);
-
-    // Close the client socket
     closesocket(sock);
     return 0;
 }
 
 int main() {
-    WSADATA wsa;                        // Structure for Winsock initialization
-    SOCKET server_socket, client_socket; // Sockets for server and clients
-    struct sockaddr_in server_addr, client_addr; // Server and client address structures
-    int addr_len = sizeof(client_addr); // Size of the client address structure
+    WSADATA wsa;
+    SOCKET server_socket, client_socket;
+    struct sockaddr_in server_addr, client_addr;
+    int addr_len = sizeof(client_addr);
 
-    // Initialize Winsock
+    load_tasks();
+
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-        printf("Failed to initialize Winsock: %d\n", WSAGetLastError()); 
+        printf("Failed to initialize Winsock: %d\n", WSAGetLastError());
         return 1;
     }
 
-    // Create the server socket
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == INVALID_SOCKET) {
         printf("Failed to create socket: %d\n", WSAGetLastError());
@@ -138,12 +188,10 @@ int main() {
         return 1;
     }
 
-    // Set up the server address structure
-    server_addr.sin_family = AF_INET;         // IPv4
-    server_addr.sin_addr.s_addr = INADDR_ANY; // Accept connections from any IP // Possible implementatio of a wannabe firewall that blocks some IP addresses, maybe one day if I remember
-    server_addr.sin_port = htons(PORT);       // Convert port to network byte order
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
 
-    // Bind the socket to the specified port
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
         printf("Bind failed: %d\n", WSAGetLastError());
         closesocket(server_socket);
@@ -151,7 +199,6 @@ int main() {
         return 1;
     }
 
-    // Listen for incoming connections (max 5 in queue)
     if (listen(server_socket, 5) == SOCKET_ERROR) {
         printf("Listen failed: %d\n", WSAGetLastError());
         closesocket(server_socket);
@@ -161,30 +208,24 @@ int main() {
 
     printf("Server running on port %d...\n", PORT);
 
-    // Main loop to accept client connections
     while (1) {
-        // Accept a new client connection
         client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &addr_len);
         if (client_socket == INVALID_SOCKET) {
             printf("Accept failed: %d\n", WSAGetLastError());
             continue;
         }
 
-        // Create a thread to handle the client
         HANDLE thread = CreateThread(NULL, 0, handle_client, (LPVOID)client_socket, 0, NULL);
         if (thread == NULL) {
             printf("Failed to create thread: %lu\n", GetLastError());
-            closesocket(client_socket); // Close socket if thread creation fails
+            closesocket(client_socket);
         } else {
-            CloseHandle(thread); // Close the thread handle (we don't wait for it)
+            CloseHandle(thread);
         }
     }
 
-    // Cleanup (unreachable in this example due to infinite loop)
+    save_tasks();
     closesocket(server_socket);
     WSACleanup();
     return 0;
 }
-
-
-
