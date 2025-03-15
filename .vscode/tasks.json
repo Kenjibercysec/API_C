@@ -4,15 +4,15 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "gcc",
+            "command": "C:\\MinGW\\bin\\gcc.exe",
             "args": [
                 "-Wall",
                 "-Wextra",
                 "-g3",
-                "C_API.c",
+                "c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\C_API.c",
                 "-o",
-                "output/C_API.exe",
-                "-lws2_32"  // Adiciona a biblioteca Winsock
+                "c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\output\\C_API.exe",
+                "-lws2_32"
             ],
             "group": {
                 "kind": "build",

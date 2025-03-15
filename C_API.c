@@ -4,10 +4,11 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#define PORT 8080          // Port where the server will listen
-#define BUFFER_SIZE 1024   // Size of the buffer for receiving/sending data
-#define MAX_TASKS 100      // Maximum number of tasks you can create
+#define PORT 8080
+#define BUFFER_SIZE 1024 // Buffer size for reading data. 1024 bytes should be enough for anyone, right?
+#define MAX_TASKS 100  // Maximum number of tasks.
 
+// Task structure:
 typedef struct {
     int id;
     char description[100];
@@ -17,20 +18,25 @@ typedef struct {
 Task tasks[MAX_TASKS];
 int task_count = 0;
 
+// Function to save tasks to a file.
 void save_tasks() {
-    FILE *file = fopen("tasks.txt", "w");
+    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\tasks.txt", "w");
     if (file) {
+        printf("Saving tasks to tasks.txt...\n");
         for (int i = 0; i < task_count; i++) {
             fprintf(file, "%d,%s,%d\n", tasks[i].id, tasks[i].description, tasks[i].completed);
+            printf("Saved task: %d,%s,%d\n", tasks[i].id, tasks[i].description, tasks[i].completed);
         }
         fclose(file);
+        printf("Tasks saved successfully.\n");
     } else {
-        printf("Failed to save tasks to file\n");
+        printf("Failed to open tasks.txt for writing: %lu\n", GetLastError());
     }
 }
 
+// Function to load tasks from a file.
 void load_tasks() {
-    FILE *file = fopen("tasks.txt", "r");
+    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\tasks.txt", "r");
     if (file) {
         task_count = 0;
         while (task_count < MAX_TASKS && fscanf(file, "%d,%99[^,],%d\n", 
@@ -38,17 +44,22 @@ void load_tasks() {
             task_count++;
         }
         fclose(file);
+        printf("Tasks loaded successfully: %d tasks\n", task_count);
+    } else {
+        printf("No tasks.txt found or failed to open: %lu\n", GetLastError());
     }
 }
 
+// Function to log requests to a file.
 void log_request(const char *request) {
-    FILE *file = fopen("api_log.txt", "a");
+    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\api_log.txt", "a");
     if (file) {
         fprintf(file, "[%s] %s\n", __TIMESTAMP__, request);
         fclose(file);
     }
 }
 
+// Function to check if the request is authorized.
 int is_authorized(const char *buffer) {
     const char *auth = strstr(buffer, "Authorization: Basic ");
     if (auth) {
@@ -58,6 +69,7 @@ int is_authorized(const char *buffer) {
     return 0;
 }
 
+// Function to handle client requests.
 DWORD WINAPI handle_client(LPVOID client_socket) {
     SOCKET sock = (SOCKET)client_socket;
     char buffer[BUFFER_SIZE];
@@ -74,6 +86,20 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
 
     log_request(buffer);
 
+    // Handle OPTIONS request for CORS preflight
+    if (strncmp(buffer, "OPTIONS /tasks", 14) == 0) {
+        sprintf(response, "HTTP/1.1 200 OK\r\n"
+                          "Access-Control-Allow-Origin: *\r\n"
+                          "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
+                          "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
+                          "Content-Length: 0\r\n"
+                          "\r\n");
+        send(sock, response, strlen(response), 0);
+        closesocket(sock);
+        return 0;
+    }
+
+    // Check authorization for non-OPTIONS requests
     if (!is_authorized(buffer)) {
         sprintf(response, "HTTP/1.1 401 Unauthorized\r\nAccess-Control-Allow-Origin: *\r\nWWW-Authenticate: Basic realm=\"To-Do API\"\r\nContent-Type: text/plain\r\n\r\nUnauthorized access");
         send(sock, response, strlen(response), 0);
@@ -81,6 +107,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
         return 1;
     }
 
+    // Handle POST request to create a new task
     if (strncmp(buffer, "POST /tasks", 11) == 0) {
         char *body = strstr(buffer, "\r\n\r\n");
         if (body && task_count < MAX_TASKS) {
@@ -101,6 +128,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nBody required or task limit reached");
         }
     }
+    // Handle GET request to retrieve all tasks
     else if (strncmp(buffer, "GET /tasks", 10) == 0) {
         char task_list[BUFFER_SIZE] = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\n\r\n{\"tasks\": [";
         for (int i = 0; i < task_count; i++) {
@@ -113,6 +141,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
         strcat(task_list, "]}");
         strcpy(response, task_list);
     }
+    // Handle PUT request to update a task as completed
     else if (strncmp(buffer, "PUT /tasks/", 11) == 0) {
         char *id_start = buffer + 11;
         char *id_end = strchr(id_start, ' ');
@@ -135,6 +164,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nInvalid task ID");
         }
     }
+    // Handle DELETE request to delete a task
     else if (strncmp(buffer, "DELETE /tasks/", 14) == 0) {
         char *id_start = buffer + 14;
         char *id_end = strchr(id_start, ' ');
@@ -159,6 +189,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nInvalid task ID");
         }
     }
+    // Handle unknown routes
     else {
         sprintf(response, "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n\r\nWrong route buddy");
     }
@@ -168,6 +199,7 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
     return 0;
 }
 
+// Main function to initialize the server and handle incoming connections.
 int main() {
     WSADATA wsa;
     SOCKET server_socket, client_socket;
