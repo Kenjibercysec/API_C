@@ -6,6 +6,30 @@
 
 #define PORT 8080          // Port where the server will listen
 #define BUFFER_SIZE 1024   // Size of the buffer for receiving/sending data
+#define MAX_TASKS 100      // Maximum number of tasks you can create
+
+
+// Structure to store all the tasks
+typedef struct {
+    int id;             // Unique identifier for the task
+    char description[100]; // Description of the task
+    int completed;      // Flag to mark the task as completed
+} Task;
+
+// Global array to store all the tasks
+Task tasks[MAX_TASKS];
+int task_count = 0; // Number of tasks currently stored
+
+// Function to save the log requests in a file
+void log_request(const char *request){
+    FILE *file = fopen("api_log.txt", "a");
+    if(log){
+        fprintf(log, "[%s] %s\n", __TIMESTAMP__, request);
+        fclose(log);
+    }
+}
+
+
 
 #pragma comment(lib, "ws2_32.lib") // Links the Winsock library
                                 // Error flag: This function is not working properly but it doesn't seem to be a critical error, it still works so...
@@ -59,6 +83,21 @@ DWORD WINAPI handle_client(LPVOID client_socket) {
             // If no body is found, return a 400 Bad Request
             sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nRequest body not found");
         }
+    }
+
+    //FEAT log? adding the PUT and DELETE methods
+    //Test prompt? PUT http://localhost:8080/data -d "new stuff"
+    // or DELETE http://localhost:8080/data
+    else if(strncmo(buffer, "PUT /data", 9) == 0) {
+        char *body = strstr(buffer, "\r\n\r\n");
+        if(body) {
+            body += 4;
+            sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"updated\": \"Data updated with %s\"}", body);
+        }else {
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nBody required");
+        }
+    } else if(strncmp(buffer, "DELETE /data", 12) == 0){
+        spritnf(response, "HTTP/1.1 200 OK\r\n\r\n{\"deleted\": \"Data removed\"}");
     }
     // Unknown route
     else {
@@ -141,3 +180,6 @@ int main() {
     WSACleanup();
     return 0;
 }
+
+
+
