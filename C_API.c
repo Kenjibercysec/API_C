@@ -20,7 +20,7 @@ int task_count = 0;
 
 // Function to save tasks to a file.
 void save_tasks() {
-    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\tasks.txt", "w");
+    FILE *file = fopen("tasks.txt", "w");
     if (file) {
         printf("Saving tasks to tasks.txt...\n");
         for (int i = 0; i < task_count; i++) {
@@ -36,7 +36,7 @@ void save_tasks() {
 
 // Function to load tasks from a file.
 void load_tasks() {
-    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\tasks.txt", "r");
+    FILE *file = fopen("tasks.txt", "r");
     if (file) {
         task_count = 0;
         while (task_count < MAX_TASKS && fscanf(file, "%d,%99[^,],%d\n", 
@@ -52,7 +52,7 @@ void load_tasks() {
 
 // Function to log requests to a file.
 void log_request(const char *request) {
-    FILE *file = fopen("c:\\Users\\silas\\OneDrive\\Desktop\\API_C\\api_log.txt", "a");
+    FILE *file = fopen("api_log.txt", "a");
     if (file) {
         fprintf(file, "[%s] %s\n", __TIMESTAMP__, request);
         fclose(file);
