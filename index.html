@@ -3,41 +3,738 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To-Do List</title>
+    <title>TaskMaster Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 20px auto;
+        :root {
+            --light-blue: #a8d8ea;
+            --light-green: #98fb98;
+            --light-yellow: #ffd700;
+            --light-bg: #f0f8ff;
+            --darker-bg: #e6f2ff;
+            --text-color: #2c3e50;
+            --border-color: #b0c4de;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --success-color: #98fb98;
+            --danger-color: #ffb6c1;
+            --shadow-color: rgba(176, 196, 222, 0.3);
+            --accent-color: #4a90e2;
         }
-        ul {
-            list-style-type: none;
+
+        * {
+            margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
-        li {
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: linear-gradient(135deg, var(--light-bg), var(--darker-bg));
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 2rem;
+            letter-spacing: 1px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(168, 216, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(152, 251, 152, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 1s ease-in;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--light-blue), transparent);
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            border-radius: 2px;
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .header p {
+            color: var(--text-color);
+            font-size: 1.3rem;
+            font-family: 'Share Tech Mono', monospace;
+            margin-top: 1.5rem;
+            opacity: 0.9;
+        }
+
+        .task-form {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px var(--shadow-color);
+            margin-bottom: 2.5rem;
+            animation: slideUp 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .input-group {
             display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
+            gap: 1.5rem;
+            position: relative;
         }
+
+        #taskInput {
+            flex: 1;
+            padding: 1.2rem;
+            background: white;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        #taskInput:focus {
+            outline: none;
+            border-color: var(--light-blue);
+            box-shadow: 0 0 0 3px rgba(168, 216, 234, 0.3);
+        }
+
+        #taskInput::placeholder {
+            color: var(--border-color);
+            opacity: 0.7;
+        }
+
         button {
-            margin-left: 5px;
+            padding: 1.2rem 2.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .add-btn {
+            background: linear-gradient(45deg, var(--light-blue), var(--light-green));
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 6px var(--shadow-color);
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px var(--shadow-color);
+        }
+
+        .add-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .add-btn:hover::after {
+            transform: translateX(100%);
+        }
+
+        .task-list {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px var(--shadow-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .task-list::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.8rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-item:hover {
+            background: rgba(168, 216, 234, 0.1);
+        }
+
+        .task-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: var(--light-blue);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .task-checkbox:hover {
+            transform: scale(1.1);
+        }
+
+        .task-description {
+            font-size: 1.2rem;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: var(--border-color);
+            opacity: 0.7;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.8rem;
+            border-radius: 8px;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border-color);
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn i {
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .complete-btn {
+            color: var(--text-color);
+        }
+
+        .complete-btn:hover {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            transform: rotate(360deg);
+        }
+
+        .delete-btn {
+            color: var(--text-color);
+        }
+
+        .delete-btn:hover {
+            background: var(--danger-color);
+            border-color: var(--danger-color);
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-color);
+            position: relative;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            color: var(--light-blue);
+            opacity: 0.8;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .empty-state h3 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+
+        .empty-state p {
+            color: var(--text-color);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .task-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
+
+            .task-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .action-btn {
+                width: 40px;
+                height: 40px;
+                padding: 0.6rem;
+            }
+        }
+
+        /* Star Wars elements */
+        .container::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Additional Star Wars elements */
+        .task-form::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .task-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(to bottom, var(--light-blue), var(--light-green));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .task-item:hover::before {
+            opacity: 1;
+        }
+
+        .task-checkbox::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 2px solid var(--light-blue);
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .task-checkbox:checked::after {
+            opacity: 1;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .action-btn:hover::before {
+            transform: translateX(100%);
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 8px 16px var(--shadow-color);
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .modal::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--light-blue), var(--light-green));
+            box-shadow: 0 0 10px var(--light-blue);
+        }
+
+        .modal h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+            text-align: center;
+        }
+
+        .modal p {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .modal-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .modal-btn:hover::before {
+            transform: translateX(100%);
+        }
+
+        .modal-btn.confirm {
+            background: var(--danger-color);
+            color: white;
+            border: 2px solid var(--danger-color);
+        }
+
+        .modal-btn.cancel {
+            background: var(--light-blue);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <h1>To-Do List</h1>
-    <form id="taskForm">
-        <input type="text" id="taskInput" placeholder="Enter a new task" required>
-        <button type="submit">Add Task</button>
-    </form>
-    <ul id="taskList"></ul>
+    <div class="container">
+        <header class="header">
+            <h1>TaskMaster Pro</h1>
+            <p>Organize your tasks with style and efficiency</p>
+        </header>
+
+        <form id="taskForm" class="task-form">
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="What needs to be done?" required>
+                <button type="submit" class="add-btn">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        </form>
+
+        <div class="task-list" id="taskList">
+            <!-- Tasks will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span>System Online</span>
+    </div>
+
+    <!-- Modal for delete confirmation -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>Delete Task</h3>
+            <p>Are you sure you want to delete this task?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="modal-btn confirm" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_URL = 'http://localhost:8080';
-        const auth = 'Basic ' + btoa('user:pass'); // Base64 encode "user:pass"
+        const auth = 'Basic ' + btoa('user:pass');
 
-        // Function to fetch and display tasks
+        function createTaskElement(task) {
+            const taskItem = document.createElement('div');
+            taskItem.className = 'task-item';
+            taskItem.innerHTML = `
+                <div class="task-content">
+                    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+                           onclick="toggleTask(${task.id}, ${task.completed})">
+                    <span class="task-description ${task.completed ? 'completed' : ''}">${task.description}</span>
+                </div>
+                <div class="task-actions">
+                    <button class="action-btn complete-btn" onclick="toggleTask(${task.id}, ${task.completed})">
+                        <i class="fas ${task.completed ? 'fa-undo' : 'fa-check'}"></i>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deleteTask(${task.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            return taskItem;
+        }
+
+        function showEmptyState() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No tasks yet</h3>
+                    <p>Add your first task to get started!</p>
+                </div>
+            `;
+        }
+
         function loadTasks() {
             fetch(`${API_URL}/tasks`, {
                 headers: {
@@ -51,34 +748,31 @@
             .then(data => {
                 const taskList = document.getElementById('taskList');
                 taskList.innerHTML = '';
+                
+                if (data.tasks.length === 0) {
+                    showEmptyState();
+                    return;
+                }
+
                 data.tasks.forEach(task => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        ${task.description} (ID: ${task.id})
-                        <span>
-                            <button onclick="toggleTask(${task.id}, ${task.completed})">
-                                ${task.completed ? 'Undo' : 'Complete'}
-                            </button>
-                            <button onclick="deleteTask(${task.id})">Delete</button>
-                        </span>
-                    `;
-                    taskList.appendChild(li);
+                    taskList.appendChild(createTaskElement(task));
                 });
             })
-            // Yeah, you need to use javascript, I didn't wanted to but there's nothing I can do about it
-            // Only pure HTMl can't make HTTP requests without reloading, AND, I need to manipulate the DOM
-            .catch(error => console.error('Error loading tasks:', error));
+            .catch(error => {
+                console.error('Error loading tasks:', error);
+                showEmptyState();
+            });
         }
 
-        // Function to add a new task
         document.getElementById('taskForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const description = document.getElementById('taskInput').value;
+            
             fetch(`${API_URL}/tasks`, {
                 method: 'POST',
                 headers: {
                     'Authorization': auth,
-                    'Content-Type': 'text/plain' // API expects plain text
+                    'Content-Type': 'text/plain'
                 },
                 body: description
             })
@@ -88,12 +782,14 @@
             })
             .then(() => {
                 document.getElementById('taskInput').value = '';
-                loadTasks(); // Refresh the list
+                loadTasks();
             })
-            .catch(error => console.error('Error adding task:', error));
+            .catch(error => {
+                console.error('Error adding task:', error);
+                alert('Failed to add task. Please try again.');
+            });
         });
 
-        // Function to toggle task completion
         function toggleTask(id, completed) {
             fetch(`${API_URL}/tasks/${id}`, {
                 method: 'PUT',
@@ -103,14 +799,32 @@
             })
             .then(response => {
                 if (!response.ok) throw new Error('Failed to toggle task');
-                loadTasks(); // Refresh the list
+                loadTasks();
             })
-            .catch(error => console.error('Error toggling task:', error));
+            .catch(error => {
+                console.error('Error toggling task:', error);
+                alert('Failed to update task. Please try again.');
+            });
         }
 
-        // Function to delete a task
-        function deleteTask(id) {
-            fetch(`${API_URL}/tasks/${id}`, {
+        let taskToDelete = null;
+
+        function showDeleteModal(id) {
+            taskToDelete = id;
+            const modal = document.getElementById('deleteModal');
+            modal.classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('active');
+            taskToDelete = null;
+        }
+
+        function confirmDelete() {
+            if (!taskToDelete) return;
+
+            fetch(`${API_URL}/tasks/${taskToDelete}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': auth
@@ -118,12 +832,33 @@
             })
             .then(response => {
                 if (!response.ok) throw new Error('Failed to delete task');
-                loadTasks(); // Refresh the list
+                closeDeleteModal();
+                loadTasks();
             })
-            .catch(error => console.error('Error deleting task:', error));
+            .catch(error => {
+                console.error('Error deleting task:', error);
+                alert('Failed to delete task. Please try again.');
+            });
         }
 
-        // Load tasks when the page loads
+        function deleteTask(id) {
+            showDeleteModal(id);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDeleteModal();
+            }
+        });
+
         window.onload = loadTasks;
     </script>
 </body>
