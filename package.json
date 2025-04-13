@@ -4,10 +4,14 @@
   "description": "C API wrapped for Vercel deployment",
   "main": "api/index.js",
   "scripts": {
-    "build": "node build.js"
+    "start": "node api/index.js",
+    "build": "node api/index.js",
+    "vercel-build": "echo Building..."
   },
   "dependencies": {
-    "node-addon-api": "^7.0.0",
-    "node-gyp": "^10.0.1"
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 } 

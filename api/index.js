@@ -1,4 +1,8 @@
+const express = require('express');
 const fs = require('fs').promises;
+
+const app = express();
+app.use(express.json());
 
 // In-memory storage for tasks (since Vercel functions are stateless)
 let tasks = [];
@@ -23,69 +27,83 @@ async function saveTasks() {
 }
 
 // Authentication middleware
-function isAuthorized(req) {
+function isAuthorized(req, res, next) {
   const auth = req.headers.authorization;
-  return auth === 'Basic dXNlcjpwYXNz'; // Same as your C code
+  if (auth === 'Basic dXNlcjpwYXNz') {
+    next();
+  } else {
+    res.status(401).json({ error: 'Unauthorized access' });
+  }
 }
 
-module.exports = async (req, res) => {
-  // CORS headers
+// CORS middleware
+app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-
-  // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+  next();
+});
 
-  // Check authorization
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized access' });
-  }
-
+// Routes
+app.get('/tasks', isAuthorized, async (req, res) => {
   await loadTasks();
+  res.json({ tasks });
+});
 
-  try {
-    switch (req.method) {
-      case 'GET':
-        return res.status(200).json({ tasks });
+app.post('/tasks', isAuthorized, async (req, res) => {
+  await loadTasks();
+  const newTask = {
+    id: tasks.length + 1,
+    description: req.body.description,
+    completed: false
+  };
+  tasks.push(newTask);
+  await saveTasks();
+  res.status(201).json(newTask);
+});
 
-      case 'POST':
-        const newTask = {
-          id: tasks.length + 1,
-          description: req.body.description,
-          completed: false
-        };
-        tasks.push(newTask);
-        await saveTasks();
-        return res.status(201).json(newTask);
-
-      case 'PUT':
-        const taskId = parseInt(req.query.id);
-        const task = tasks.find(t => t.id === taskId);
-        if (task) {
-          task.completed = true;
-          await saveTasks();
-          return res.status(200).json(task);
-        }
-        return res.status(404).json({ error: 'Task not found' });
-
-      case 'DELETE':
-        const deleteId = parseInt(req.query.id);
-        const index = tasks.findIndex(t => t.id === deleteId);
-        if (index !== -1) {
-          tasks.splice(index, 1);
-          await saveTasks();
-          return res.status(200).json({ deleted: `Task ${deleteId}` });
-        }
-        return res.status(404).json({ error: 'Task not found' });
-
-      default:
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+app.put('/tasks/:id', isAuthorized, async (req, res) => {
+  await loadTasks();
+  const taskId = parseInt(req.params.id);
+  const task = tasks.find(t => t.id === taskId);
+  if (task) {
+    task.completed = true;
+    await saveTasks();
+    res.json(task);
+  } else {
+    res.status(404).json({ error: 'Task not found' });
   }
-}; 
+});
+
+app.delete('/tasks/:id', isAuthorized, async (req, res) => {
+  await loadTasks();
+  const taskId = parseInt(req.params.id);
+  const index = tasks.findIndex(t => t.id === taskId);
+  if (index !== -1) {
+    tasks.splice(index, 1);
+    await saveTasks();
+    res.json({ deleted: `Task ${taskId}` });
+  } else {
+    res.status(404).json({ error: 'Task not found' });
+  }
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// For local development
+if (require.main === module) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
+
+// For Vercel
+module.exports = app; 
