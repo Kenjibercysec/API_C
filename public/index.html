@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .task-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .task-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        .task-completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.delete {
+            background: #f44336;
+        }
+        button.delete:hover {
+            background: #da190b;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 60%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="task-form">
+        <h2>Adicionar Nova Tarefa</h2>
+        <input type="text" id="taskInput" placeholder="Digite sua tarefa">
+        <button onclick="addTask()">Adicionar</button>
+    </div>
+
+    <div class="task-list">
+        <h2>Tarefas</h2>
+        <div id="taskContainer"></div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const AUTH_HEADER = 'Basic dXNlcjpwYXNz';
+
+        // Função para carregar tarefas
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/tasks`, {
+                    headers: {
+                        'Authorization': AUTH_HEADER
+                    }
+                });
+                const data = await response.json();
+                displayTasks(data.tasks);
+            } catch (error) {
+                console.error('Erro ao carregar tarefas:', error);
+            }
+        }
+
+        // Função para adicionar tarefa
+        async function addTask() {
+            const input = document.getElementById('taskInput');
+            const description = input.value.trim();
+            
+            if (!description) return;
+
+            try {
+                const response = await fetch(`${API_URL}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': AUTH_HEADER
+                    },
+                    body: JSON.stringify({ description })
+                });
+                
+                if (response.ok) {
+                    input.value = '';
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar tarefa:', error);
+            }
+        }
+
+        // Função para marcar tarefa como completa
+        async function completeTask(id) {
+            try {
+                const response = await fetch(`${API_URL}/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': AUTH_HEADER
+                    }
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Erro ao completar tarefa:', error);
+            }
+        }
+
+        // Função para deletar tarefa
+        async function deleteTask(id) {
+            try {
+                const response = await fetch(`${API_URL}/tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': AUTH_HEADER
+                    }
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Erro ao deletar tarefa:', error);
+            }
+        }
+
+        // Função para exibir tarefas
+        function displayTasks(tasks) {
+            const container = document.getElementById('taskContainer');
+            container.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = `task-item ${task.completed ? 'task-completed' : ''}`;
+                
+                taskElement.innerHTML = `
+                    <span>${task.description}</span>
+                    ${!task.completed ? `<button onclick="completeTask(${task.id})">Completar</button>` : ''}
+                    <button class="delete" onclick="deleteTask(${task.id})">Deletar</button>
+                `;
+                
+                container.appendChild(taskElement);
+            });
+        }
+
+        // Carregar tarefas ao iniciar
+        loadTasks();
+
+        // Adicionar tarefa ao pressionar Enter
+        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+    </script>
+</body>
+</html> 
