@@ -1,48 +1,43 @@
-# Sistema de Gerenciamento de Tarefas com API em C
+# C API To-Do List - Vercel Version
 
-Este projeto implementa uma API HTTP em C para gerenciar tarefas, integrada com um frontend simples em HTML/JavaScript. Abaixo estão as principais funcionalidades e implementações realizadas.
+Este projeto é uma adaptação da API To-Do List originalmente escrita em C para funcionar no Vercel.
 
-## Funcionalidades
+## Como usar
 
-### Backend (API em C)
-- **Framework**: API HTTP em C com Winsock, rodando na porta 8080 com suporte a múltiplas conexões via threads.
-- **Rotas**:
-  - `GET /tasks`: Lista todas as tarefas em JSON.
-  - `POST /tasks`: Adiciona uma nova tarefa.
-  - `PUT /tasks/<id>`: Marca uma tarefa como concluída.
-  - `DELETE /tasks/<id>`: Exclui uma tarefa.
-  - `OPTIONS /tasks`: Suporte a CORS preflight.
-- **Autenticação**: Autenticação Básica (usuário: `user`, senha: `pass`).
-- **Persistência**: Tarefas salvas em `tasks.txt` (formato: `id,description,completed`) no diretório `c:\Users\silas\OneDrive\Desktop\API_C\`.
-- **Logging**: Requisições registradas em `api_log.txt` com timestamp.
-- **CORS**: Suporte a requisições cross-origin com cabeçalhos apropriados.
-- **Segurança**: Limite de 99 caracteres nas descrições das tarefas.
-
-### Frontend (HTML/JavaScript)
-- **Interface**: Formulário para adicionar tarefas e lista dinâmica de tarefas com botões "Complete" e "Delete".
-- **JavaScript**: Usa `fetch` para interagir com a API, com autenticação integrada.
-- **Funcionalidades**:
-  - Listagem automática de tarefas ao carregar.
-  - Adição, conclusão e exclusão de tarefas em tempo real.
-
-### Configuração
-- **Compilação**: `gcc -Wall -Wextra -g3 C_API.c -o output/C_API.exe -lws2_32` no MinGW.
-- **Execução**: API em `output/C_API.exe`; frontend em `index.html` aberto no navegador.
-
-## Como Executar
-1. Compile a API:
+1. Instale o Vercel CLI:
 ```bash
-C:\MinGW\bin\gcc.exe -Wall -Wextra -g3 c:\Users\..\..\..\API_C\C_API.c -o c:\Users\..\..\Desktop\API_C\output\C_API.exe -lws2_32
+npm install -g vercel
 ```
 
-2. Execute a API:
+2. Faça login no Vercel:
 ```bash
-Localize o diretório do .exe
-C_API.exe
+vercel login
 ```
-3. Abra o frontend:
-- Abra `index.html` no navegador (`file:///c:/Users/silas/OneDrive/Desktop/API_C/index.html`).
 
-- ## Notas
-- O projeto foi desenvolvido e testado no Windows com VS Code e MinGW.
-- O `tasks.txt` é criado automaticamente ao adicionar a primeira tarefa.
+3. Deploy o projeto:
+```bash
+vercel
+```
+
+## Endpoints
+
+A API mantém as mesmas funcionalidades da versão em C:
+
+- `GET /tasks` - Lista todas as tarefas
+- `POST /tasks` - Cria uma nova tarefa
+- `PUT /tasks/:id` - Marca uma tarefa como completa
+- `DELETE /tasks/:id` - Remove uma tarefa
+
+## Autenticação
+
+Use o mesmo header de autenticação da versão C:
+```
+Authorization: Basic dXNlcjpwYXNz
+```
+
+## Notas
+
+- A API mantém a mesma interface da versão C
+- Os dados são armazenados em memória com backup em arquivo
+- Todas as rotas têm CORS habilitado
+- A autenticação básica é mantida igual à versão original

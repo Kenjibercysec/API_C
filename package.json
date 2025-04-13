@@ -1,0 +1,13 @@
+{
+  "name": "c-api-vercel",
+  "version": "1.0.0",
+  "description": "C API wrapped for Vercel deployment",
+  "main": "api/index.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.0.0",
+    "node-gyp": "^10.0.1"
+  }
+} 
