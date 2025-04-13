@@ -700,8 +700,9 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8080';
-        const auth = 'Basic ' + btoa('user:pass');
+        // Mudando de localhost para URL dinâmica
+        const API_URL = window.location.origin;
+        const auth = 'Basic dXNlcjpwYXNz';
 
         function createTaskElement(task) {
             const taskItem = document.createElement('div');
@@ -749,7 +750,7 @@
                 const taskList = document.getElementById('taskList');
                 taskList.innerHTML = '';
                 
-                if (data.tasks.length === 0) {
+                if (!data.tasks || data.tasks.length === 0) {
                     showEmptyState();
                     return;
                 }
@@ -766,22 +767,25 @@
 
         document.getElementById('taskForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const description = document.getElementById('taskInput').value;
+            const input = document.getElementById('taskInput');
+            const description = input.value.trim();
             
+            if (!description) return;
+
             fetch(`${API_URL}/tasks`, {
                 method: 'POST',
                 headers: {
                     'Authorization': auth,
-                    'Content-Type': 'text/plain'
+                    'Content-Type': 'application/json'
                 },
-                body: description
+                body: JSON.stringify({ description })
             })
             .then(response => {
                 if (!response.ok) throw new Error('Failed to add task');
                 return response.json();
             })
             .then(() => {
-                document.getElementById('taskInput').value = '';
+                input.value = '';
                 loadTasks();
             })
             .catch(error => {
@@ -791,10 +795,13 @@
         });
 
         function toggleTask(id, completed) {
+            if (completed) return; // Se já estiver completa, não faz nada
+            
             fetch(`${API_URL}/tasks/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': auth
+                    'Authorization': auth,
+                    'Content-Type': 'application/json'
                 }
             })
             .then(response => {
@@ -859,6 +866,7 @@
             }
         });
 
+        // Inicializa a aplicação
         window.onload = loadTasks;
     </script>
 </body>

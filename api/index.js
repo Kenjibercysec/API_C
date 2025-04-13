@@ -72,44 +72,62 @@ router.get('/tasks', isAuthorized, async (req, res) => {
 });
 
 router.post('/tasks', isAuthorized, async (req, res) => {
-  if (!req.body || !req.body.description) {
-    return res.status(400).json({ error: 'Description is required' });
+  try {
+    if (!req.body || !req.body.description) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+
+    await loadTasks();
+    const newTask = {
+      id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+      description: req.body.description.trim(),
+      completed: false
+    };
+
+    tasks.push(newTask);
+    await saveTasks();
+    res.status(201).json(newTask);
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ error: 'Failed to create task' });
   }
-  
-  await loadTasks();
-  const newTask = {
-    id: tasks.length + 1,
-    description: req.body.description,
-    completed: false
-  };
-  tasks.push(newTask);
-  await saveTasks();
-  res.status(201).json(newTask);
 });
 
 router.put('/tasks/:id', isAuthorized, async (req, res) => {
-  await loadTasks();
-  const taskId = parseInt(req.params.id);
-  const task = tasks.find(t => t.id === taskId);
-  if (task) {
+  try {
+    const taskId = parseInt(req.params.id);
+    await loadTasks();
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     task.completed = true;
     await saveTasks();
     res.json(task);
-  } else {
-    res.status(404).json({ error: 'Task not found' });
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 
 router.delete('/tasks/:id', isAuthorized, async (req, res) => {
-  await loadTasks();
-  const taskId = parseInt(req.params.id);
-  const index = tasks.findIndex(t => t.id === taskId);
-  if (index !== -1) {
+  try {
+    const taskId = parseInt(req.params.id);
+    await loadTasks();
+    
+    const index = tasks.findIndex(t => t.id === taskId);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     tasks.splice(index, 1);
     await saveTasks();
     res.json({ deleted: `Task ${taskId}` });
-  } else {
-    res.status(404).json({ error: 'Task not found' });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ error: 'Failed to delete task' });
   }
 });
 
