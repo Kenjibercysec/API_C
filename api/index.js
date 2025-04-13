@@ -47,13 +47,35 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.get('/tasks', isAuthorized, async (req, res) => {
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Todo API is running',
+    endpoints: {
+      tasks: {
+        GET: '/tasks - List all tasks',
+        POST: '/tasks - Create a new task',
+        PUT: '/tasks/:id - Mark task as completed',
+        DELETE: '/tasks/:id - Delete a task'
+      }
+    },
+    version: '1.0.0'
+  });
+});
+
+// API routes
+const router = express.Router();
+
+router.get('/tasks', isAuthorized, async (req, res) => {
   await loadTasks();
   res.json({ tasks });
 });
 
-app.post('/tasks', isAuthorized, async (req, res) => {
+router.post('/tasks', isAuthorized, async (req, res) => {
+  if (!req.body || !req.body.description) {
+    return res.status(400).json({ error: 'Description is required' });
+  }
+  
   await loadTasks();
   const newTask = {
     id: tasks.length + 1,
@@ -65,7 +87,7 @@ app.post('/tasks', isAuthorized, async (req, res) => {
   res.status(201).json(newTask);
 });
 
-app.put('/tasks/:id', isAuthorized, async (req, res) => {
+router.put('/tasks/:id', isAuthorized, async (req, res) => {
   await loadTasks();
   const taskId = parseInt(req.params.id);
   const task = tasks.find(t => t.id === taskId);
@@ -78,7 +100,7 @@ app.put('/tasks/:id', isAuthorized, async (req, res) => {
   }
 });
 
-app.delete('/tasks/:id', isAuthorized, async (req, res) => {
+router.delete('/tasks/:id', isAuthorized, async (req, res) => {
   await loadTasks();
   const taskId = parseInt(req.params.id);
   const index = tasks.findIndex(t => t.id === taskId);
@@ -90,6 +112,9 @@ app.delete('/tasks/:id', isAuthorized, async (req, res) => {
     res.status(404).json({ error: 'Task not found' });
   }
 });
+
+// Mount router
+app.use(router);
 
 // Error handler
 app.use((err, req, res, next) => {
